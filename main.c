@@ -44,28 +44,6 @@ IRX_DEFINE(bdm);
 IRX_DEFINE(bdmfs_fatfs);
 IRX_DEFINE(ata_bd);
 
-static GSFONTM *gsFontM;
-
-// // DEV9
-// {"dev9", "modules/dev9_ns.irx", NULL, MODE_ALL},
-// // BDM
-// {"bdm", "modules/bdm.irx", NULL, MODE_ALL},
-// // FAT/exFAT
-// {"bdmfs_fatfs", "modules/bdmfs_fatfs.irx", NULL, MODE_ALL},
-// // ATA
-// {"ata_bd", "modules/ata_bd.irx", NULL, MODE_ATA},
-// // USBD
-// {"usbd_mini", "modules/usbd_mini.irx", NULL, MODE_USB},
-// // USB Mass Storage
-// {"usbmass_bd_mini", "modules/usbmass_bd_mini.irx", NULL, MODE_USB},
-// // MX4SIO
-// {"mx4sio_bd_mini", "modules/mx4sio_bd_mini.irx", NULL, MODE_MX4SIO},
-// // SMAP driver. Actually includes small IP stack and UDPTTY
-// {"smap_udpbd", "modules/smap_udpbd.irx", &initSMAPArguments, MODE_UDPBD},
-// // iLink
-// {"iLinkman", "modules/iLinkman.irx", NULL, MODE_ILINK},
-// // iLink Mass Storage
-// {"IEEE1394_bd_mini", "modules/IEEE1394_bd_mini.irx", NULL, MODE_ILINK},
 
 // Logs to screen and debug console
 void logString(const char *str, ...) {
@@ -201,7 +179,7 @@ int main(int argc, char *argv[]) {
   if (getDeviceDriver("mass0:")) {
     logString("Failed to get device driver\n");
   }
-  
+
   logString("Opening mass0 via opendir\n");
   directory = opendir("mass0:");
   if (directory == NULL) {
@@ -209,12 +187,13 @@ int main(int argc, char *argv[]) {
   } else
     closedir(directory);
 
-  logString("Loading FONTM\n");
-  gsFontM = gsKit_init_fontm();
+  logString("Opening FONTM\n");
+	int fontmFd = open("rom0:FONTM", O_RDONLY);
+	if(fontmFd < 0)	{
+		printf("Failed to open FONTM from ROM0\n");
+	}
 
   logString("Done");
-  while (1) {
-  }
-
+  sleep(20);
   return 0;
 }
