@@ -6,8 +6,8 @@
 #include <gsToolkit.h>
 #include <iopcontrol.h>
 #include <loadfile.h>
-#include <sbv_patches.h>
 #include <ps2sdkapi.h>
+#include <sbv_patches.h>
 #include <sifrpc.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,40 +72,47 @@ void logString(const char *str, ...) {
   va_end(args);
 }
 
+int iopInit() {
+  // Initialize the RPC manager and reset IOP
+  // SifInitRpc(0);
+  // while (!SifIopReset("", 0)) {
+  // };
+  // while (!SifIopSync()) {
+  // };
+
+  // Initialize the RPC manager
+  SifInitRpc(0);
+
+  // // Apply patches required to load modules from EE RAM
+  // if (((ret = sbv_patch_enable_lmb())) || ((ret = sbv_patch_disable_prefix_check()))) {
+  //   logString("Failed to apply patch: %d\n", ret);
+  //   return ret;
+  // }
+
+  int ret, iopret = 0;
+  // Load embedded modules
+  IRX_LOAD(iomanX);
+  IRX_LOAD(fileXio);
+  // IRX_LOAD(ps2dev9);
+  IRX_LOAD(bdm);
+  IRX_LOAD(bdmfs_fatfs);
+  IRX_LOAD(ata_bd);
+
+  return 0;
+}
+
 // Initializes IOP modules
 int main(int argc, char *argv[]) {
   // Initialize the screen
   init_scr();
 
   logString("IOP init\n");
-  // Initialize the RPC manager and reset IOP
-  SifInitRpc(0);
-  while (!SifIopReset("", 0)) {
-  };
-  while (!SifIopSync()) {
-  };
-
-  // Initialize the RPC manager
-  SifInitRpc(0);
-
-  int ret, iopret = 0;
-  // Apply patches required to load modules from EE RAM
-  if (((ret = sbv_patch_enable_lmb())) || ((ret = sbv_patch_disable_prefix_check()))) {
-    logString("Failed to apply patch: %d\n", ret);
-    return ret;
+  int res = iopInit();
+  if (res) {
+    logString("Failed to init IOP\n");
+    sleep(10);
+    return -1;
   }
-
-  logString("Loading modules\n");
-  // Load embedded modules
-  IRX_LOAD(iomanX);
-  IRX_LOAD(fileXio);
-  IRX_LOAD(sio2man);
-  IRX_LOAD(mcman);
-  IRX_LOAD(mcserv);
-  IRX_LOAD(ps2dev9);
-  IRX_LOAD(bdm);
-  IRX_LOAD(bdmfs_fatfs);
-  IRX_LOAD(ata_bd);
 
   logString("Opening mass0 via opendir\n");
   DIR *directory;
@@ -117,7 +124,7 @@ int main(int argc, char *argv[]) {
       sleep(1);
       continue;
     }
-  logString("mass0 opened, calling closedir\n");
+    logString("mass0 opened, calling closedir\n");
     closedir(directory);
   }
 
