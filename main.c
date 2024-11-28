@@ -15,7 +15,6 @@
 #include <unistd.h>
 
 // Used to get BDM driver name
-#include <usbhdfsd-common.h>
 #define NEWLIB_PORT_AWARE
 #include <fileXio_rpc.h>
 #include <io_common.h>
@@ -41,7 +40,6 @@ IRX_DEFINE(bdm);
 IRX_DEFINE(bdmfs_fatfs);
 IRX_DEFINE(ata_bd);
 
-
 // Logs to screen and debug console
 void logString(const char *str, ...) {
   va_list args;
@@ -54,21 +52,8 @@ void logString(const char *str, ...) {
 }
 
 int iopInit() {
-  // Initialize the RPC manager and reset IOP
-  // SifInitRpc(0);
-  // while (!SifIopReset("", 0)) {
-  // };
-  // while (!SifIopSync()) {
-  // };
-
   // Initialize the RPC manager
   SifInitRpc(0);
-
-  // // Apply patches required to load modules from EE RAM
-  // if (((ret = sbv_patch_enable_lmb())) || ((ret = sbv_patch_disable_prefix_check()))) {
-  //   logString("Failed to apply patch: %d\n", ret);
-  //   return ret;
-  // }
 
   int ret, iopret = 0;
   // Load embedded modules
@@ -79,28 +64,6 @@ int iopInit() {
   IRX_LOAD(bdmfs_fatfs);
   IRX_LOAD(ata_bd);
 
-  return 0;
-}
-
-// Gets BDM driver name via fileXio
-int getDeviceDriver(char *mountpoint) {
-  int fd = fileXioDopen(mountpoint);
-  if (fd < 0) {
-    return -ENODEV;
-  }
-
-  char driverName[10];
-  int deviceNumber;
-  if (fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, driverName, sizeof(driverName) - 1) >= 0) {
-    // Null-terminate the string before mapping
-    driverName[sizeof(driverName) - 1] = '\0';
-  }
-
-  // Get device number
-  fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &deviceNumber, sizeof(deviceNumber));
-
-  logString("Found device %s%d\n", driverName, deviceNumber);
-  fileXioDclose(fd);
   return 0;
 }
 
@@ -129,25 +92,28 @@ int main(int argc, char *argv[]) {
     }
     logString("mass0 opened\n");
     closedir(directory);
+    break;
   }
 
-  logString("Getting device driver\n");
-  if (getDeviceDriver("mass0:")) {
-    logString("Failed to get device driver\n");
-  }
-
-  logString("Opening mass0 via opendir\n");
-  directory = opendir("mass0:");
-  if (directory == NULL) {
-    logString("Can't open mass0:, delaying\n");
+  logString("Opening mass0 via fileXioDopen\n");
+  int fd = fileXioDopen("mass0:/");
+  if (fd < 0) {
+    logString("ERROR: Failed to open: %d\n", fd);
   } else
-    closedir(directory);
+    fileXioDclose(fd);
+
+  logString("Creating mass0:/testdir\n");
+  res = mkdir("mass0:/testdir", 0777);
+  if (res) {
+    logString("ERROR: Failed to create: %d\n", res);
+  }
 
   logString("Opening FONTM\n");
-	int fontmFd = open("rom0:FONTM", O_RDONLY);
-	if(fontmFd < 0)	{
-		printf("Failed to open FONTM from ROM0\n");
-	}
+  fd = open("rom0:FONTM", O_RDONLY);
+  if (fd < 0) {
+    logString("ERROR: Failed to open: %d\n", fd);
+  } else
+    close(fd);
 
   logString("Done");
   sleep(20);
