@@ -52,10 +52,24 @@ void logString(const char *str, ...) {
 }
 
 int iopInit() {
+  // Uncomment commented code for PCSX2
+  // Initialize the RPC manager and reset IOP
+  // SifInitRpc(0);
+  // while (!SifIopReset("", 0)) {
+  // };
+  // while (!SifIopSync()) {
+  // };
+
   // Initialize the RPC manager
   SifInitRpc(0);
 
   int ret, iopret = 0;
+  // // Apply patches required to load modules from EE RAM
+  // if ((ret = sbv_patch_enable_lmb()))
+  //   return ret;
+  // if ((ret = sbv_patch_disable_prefix_check()))
+  //   return ret;
+
   // Load embedded modules
   IRX_LOAD(iomanX);
   IRX_LOAD(fileXio);
@@ -80,27 +94,21 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  logString("Opening mass0 via opendir\n");
-  DIR *directory;
-  for (int i = 0; i < 10; i++) {
-    directory = opendir("mass0:");
-    // Check if the directory can be opened
-    if (directory == NULL) {
-      logString("Can't open mass0:, delaying\n");
-      sleep(1);
-      continue;
-    }
-    logString("mass0 opened\n");
-    closedir(directory);
-    break;
-  }
+  logString("Waiting for BDM\n");
+  sleep(5);
 
+  res = fileXioInit();
+  if (res) {
+    logString("Failed to init fileXio: %d\n", res);
+  }
   logString("Opening mass0 via fileXioDopen\n");
   int fd = fileXioDopen("mass0:/");
   if (fd < 0) {
     logString("ERROR: Failed to open: %d\n", fd);
   } else
     fileXioDclose(fd);
+
+  // fileXioExit(); // Uncommenting this makes the example succeed
 
   logString("Creating mass0:/testdir\n");
   res = mkdir("mass0:/testdir", 0777);
@@ -116,6 +124,6 @@ int main(int argc, char *argv[]) {
     close(fd);
 
   logString("Done");
-  sleep(20);
+  sleep(10);
   return 0;
 }
