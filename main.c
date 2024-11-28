@@ -36,9 +36,6 @@
 // Embedded IOP modules required for reading from memory card
 IRX_DEFINE(iomanX);
 IRX_DEFINE(fileXio);
-IRX_DEFINE(sio2man);
-IRX_DEFINE(mcman);
-IRX_DEFINE(mcserv);
 IRX_DEFINE(ps2dev9);
 IRX_DEFINE(bdm);
 IRX_DEFINE(bdmfs_fatfs);
@@ -107,44 +104,6 @@ int getDeviceDriver(char *mountpoint) {
   return 0;
 }
 
-int traverseDir(DIR *directory) {
-  if (directory == NULL)
-    return -ENOENT;
-
-  // Read directory entries
-  struct dirent *entry;
-  char titlePath[1025];
-  if (!getcwd(titlePath, 1025)) { // Initialize titlePath with current working directory
-    logString("ERROR: Failed to get cwd\n");
-    return -ENOENT;
-  }
-
-  while ((entry = readdir(directory)) != NULL) {
-    // Check if the entry is a directory using d_type
-    switch (entry->d_type) {
-    case DT_DIR:
-      printf("\tdirectory %s\n", entry->d_name);
-      // Open dir and change cwd
-      DIR *d = opendir(entry->d_name);
-      if (d == NULL) {
-        printf("Failed to open directory\n");
-        continue;
-      }
-      chdir(entry->d_name);
-      // Process inner directory recursively
-      traverseDir(d);
-      // Return back to root directory
-      chdir("..");
-      closedir(d);
-      continue;
-    default:
-      printf("\t\tfile %s\n", entry->d_name);
-    }
-  }
-
-  return 0;
-}
-
 // Initializes IOP modules
 int main(int argc, char *argv[]) {
   // Initialize the screen
@@ -168,11 +127,8 @@ int main(int argc, char *argv[]) {
       sleep(1);
       continue;
     }
-    logString("mass0 opened, traversing\n");
-    chdir("mass0:");
-    traverseDir(directory);
+    logString("mass0 opened\n");
     closedir(directory);
-    break;
   }
 
   logString("Getting device driver\n");
