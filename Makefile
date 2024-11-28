@@ -7,7 +7,7 @@ EE_BIN_DEBUG := $(ELF_BASE_NAME)-debug_unc.elf
 EE_BIN_DEBUG_PKD := $(ELF_BASE_NAME)-debug.elf
 
 EE_OBJS = main.o
-IRX_FILES += fileXio.irx iomanX.irx ps2dev9.irx bdm.irx bdmfs_fatfs.irx ata_bd.irx
+IRX_FILES += fileXio.irx fileXio_verbose.irx iomanX.irx ps2dev9.irx bdm.irx bdmfs_fatfs.irx ata_bd.irx
 
 
 EE_LIBS = -ldebug -lfileXio -lpatches -lgskit -ldmakit -lgskit_toolkit

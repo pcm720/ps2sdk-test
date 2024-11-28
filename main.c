@@ -33,9 +33,9 @@
     return iopret;                                                                                                                                   \
   }
 
-// Embedded IOP modules required for reading from memory card
 IRX_DEFINE(iomanX);
 IRX_DEFINE(fileXio);
+IRX_DEFINE(fileXio_verbose);
 IRX_DEFINE(ps2dev9);
 IRX_DEFINE(bdm);
 IRX_DEFINE(bdmfs_fatfs);
@@ -52,8 +52,8 @@ void logString(const char *str, ...) {
   va_end(args);
 }
 
-int iopInit() {
-  // Uncomment commented code for PCSX2
+int iopInit(int verbose) {
+  // Uncomment commented code for PCSX2 (note that the issue is not reproducible there)
   // Initialize the RPC manager and reset IOP
   // SifInitRpc(0);
   // while (!SifIopReset("", 0)) {
@@ -73,7 +73,11 @@ int iopInit() {
 
   // Load embedded modules
   IRX_LOAD(iomanX);
-  IRX_LOAD(fileXio);
+  if (verbose) {
+    IRX_LOAD(fileXio_verbose);
+  } else {
+    IRX_LOAD(fileXio);
+  }
   // IRX_LOAD(ps2dev9);
   IRX_LOAD(bdm);
   IRX_LOAD(bdmfs_fatfs);
@@ -88,7 +92,9 @@ int main(int argc, char *argv[]) {
   init_scr();
 
   logString("IOP init\n");
-  int res = iopInit();
+  // Using iopInit(0) to load the regular fileXio makes the example fail on loading rom0:FONTM.
+  // Using iopInit(1) to load fileXio_verbose makes the example succeed.
+  int res = iopInit(0);
   if (res) {
     logString("Failed to init IOP\n");
     sleep(10);
@@ -103,6 +109,7 @@ int main(int argc, char *argv[]) {
   if (fd < 0) {
     logString("ERROR: Failed to open: %d\n", fd);
   } else {
+    // Not using fileXioIoctl2 makes the example succeed
     char driverName[10];
     logString("Getting driver name via fileXioIoctl2\n");
     res = fileXioIoctl2(ps2sdk_get_iop_fd(fd), USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, driverName, sizeof(driverName));
@@ -117,12 +124,14 @@ int main(int argc, char *argv[]) {
 
   // fileXioExit(); // Uncommenting this makes the example succeed
 
+  // Not creating the directory makes the example succeed
   logString("Creating mass0:/testdir\n");
   res = mkdir("mass0:/testdir", 0777);
   if (res) {
     logString("ERROR: Failed to create: %d\n", res);
   }
 
+  // Always fails with non-verbose fileXio after fileXioIoctl2 and mkdir are called
   logString("Opening FONTM\n");
   fd = open("rom0:FONTM", O_RDONLY);
   if (fd < 0) {
