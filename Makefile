@@ -10,7 +10,7 @@ EE_OBJS = main.o
 IRX_FILES += sio2man.irx mcman.irx mcserv.irx fileXio.irx iomanX.irx freepad.irx ps2dev9.irx bdm.irx bdmfs_fatfs.irx ata_bd.irx
 
 
-EE_LIBS = -ldebug -lfileXio -lpatches -lgskit -ldmakit -lgskit_toolkit -lpng -lz -ltiff -lpad -lmc
+EE_LIBS = -ldebug -lfileXio -lpatches -lgskit -ldmakit -lgskit_toolkit
 EE_CFLAGS := -mno-gpopt -G0 -DGIT_VERSION="\"${GIT_VERSION}\""
 
 EE_OBJS_DIR = obj/

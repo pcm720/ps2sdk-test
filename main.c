@@ -14,6 +14,12 @@
 #include <string.h>
 #include <unistd.h>
 
+// Used to get BDM driver name
+#include <usbhdfsd-common.h>
+#define NEWLIB_PORT_AWARE
+#include <fileXio_rpc.h>
+#include <io_common.h>
+
 // Macros for loading embedded IOP modules
 #define IRX_DEFINE(mod)                                                                                                                              \
   extern unsigned char mod##_irx[] __attribute__((aligned(16)));                                                                                     \
@@ -101,6 +107,66 @@ int iopInit() {
   return 0;
 }
 
+// Gets BDM driver name via fileXio
+int getDeviceDriver(char *mountpoint) {
+  int fd = fileXioDopen(mountpoint);
+  if (fd < 0) {
+    return -ENODEV;
+  }
+
+  char driverName[10];
+  int deviceNumber;
+  if (fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, driverName, sizeof(driverName) - 1) >= 0) {
+    // Null-terminate the string before mapping
+    driverName[sizeof(driverName) - 1] = '\0';
+  }
+
+  // Get device number
+  fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &deviceNumber, sizeof(deviceNumber));
+
+  logString("Found device %s%d\n", driverName, deviceNumber);
+  fileXioDclose(fd);
+  return 0;
+}
+
+int traverseDir(DIR *directory) {
+  if (directory == NULL)
+    return -ENOENT;
+
+  // Read directory entries
+  struct dirent *entry;
+  char titlePath[1025];
+  if (!getcwd(titlePath, 1025)) { // Initialize titlePath with current working directory
+    logString("ERROR: Failed to get cwd\n");
+    return -ENOENT;
+  }
+
+  while ((entry = readdir(directory)) != NULL) {
+    // Check if the entry is a directory using d_type
+    switch (entry->d_type) {
+    case DT_DIR:
+      printf("\tdirectory %s\n", entry->d_name);
+      // Open dir and change cwd
+      DIR *d = opendir(entry->d_name);
+      if (d == NULL) {
+        printf("Failed to open directory\n");
+        continue;
+      }
+      chdir(entry->d_name);
+      // Process inner directory recursively
+      traverseDir(d);
+      // Return back to root directory
+      chdir("..");
+      closedir(d);
+      continue;
+    default:
+      printf("\t\tfile %s\n", entry->d_name);
+    }
+  }
+
+  return 0;
+}
+
 // Initializes IOP modules
 int main(int argc, char *argv[]) {
   // Initialize the screen
@@ -124,9 +190,24 @@ int main(int argc, char *argv[]) {
       sleep(1);
       continue;
     }
-    logString("mass0 opened, calling closedir\n");
+    logString("mass0 opened, traversing\n");
+    chdir("mass0:");
+    traverseDir(directory);
     closedir(directory);
+    break;
   }
+
+  logString("Getting device driver\n");
+  if (getDeviceDriver("mass0:")) {
+    logString("Failed to get device driver\n");
+  }
+  
+  logString("Opening mass0 via opendir\n");
+  directory = opendir("mass0:");
+  if (directory == NULL) {
+    logString("Can't open mass0:, delaying\n");
+  } else
+    closedir(directory);
 
   logString("Loading FONTM\n");
   gsFontM = gsKit_init_fontm();
