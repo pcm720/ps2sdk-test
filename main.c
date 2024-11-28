@@ -97,10 +97,6 @@ int main(int argc, char *argv[]) {
   logString("Waiting for BDM\n");
   sleep(5);
 
-  res = fileXioInit();
-  if (res) {
-    logString("Failed to init fileXio: %d\n", res);
-  }
   logString("Opening mass0 via fileXioDopen\n");
   int fd = fileXioDopen("mass0:/");
   if (fd < 0) {
