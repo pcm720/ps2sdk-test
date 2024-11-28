@@ -18,6 +18,7 @@
 #define NEWLIB_PORT_AWARE
 #include <fileXio_rpc.h>
 #include <io_common.h>
+#include <usbhdfsd-common.h>
 
 // Macros for loading embedded IOP modules
 #define IRX_DEFINE(mod)                                                                                                                              \
@@ -97,12 +98,22 @@ int main(int argc, char *argv[]) {
   logString("Waiting for BDM\n");
   sleep(5);
 
-  logString("Opening mass0 via fileXioDopen\n");
-  int fd = fileXioDopen("mass0:/");
+  logString("Opening mass0 via open\n");
+  int fd = open("mass0:", O_RDONLY | O_DIRECTORY);
   if (fd < 0) {
     logString("ERROR: Failed to open: %d\n", fd);
-  } else
-    fileXioDclose(fd);
+  } else {
+    char driverName[10];
+    logString("Getting driver name via fileXioIoctl2\n");
+    res = fileXioIoctl2(ps2sdk_get_iop_fd(fd), USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, driverName, sizeof(driverName));
+    if (res >= 0) {
+      driverName[sizeof(driverName) - 1] = '\0';
+      logString("Driver name is %s\n", driverName);
+    } else {
+      logString("Failed to get driver name: %d\n", res);
+    }
+    close(fd);
+  }
 
   // fileXioExit(); // Uncommenting this makes the example succeed
 
