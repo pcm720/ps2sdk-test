@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ghcr.io/ps2homebrew/ps2homebrew:main@sha256:6f9370f3437840c438616e2abb16131a485cac57eb928b941e22783c57baf985
+    container: ghcr.io/ps2homebrew/ps2homebrew:main
     steps:
     - uses: actions/checkout@v4
 
@@ -25,18 +25,10 @@ jobs:
       uses: actions/upload-artifact@v4
       if: steps.make.outcome == 'success'
       with:
-        name: nhddl
+        name: test
         path: |
-          nhddl-*.elf
-          !nhddl-*_unc.elf
-
-    - name: Upload YAML examples
-      if: steps.make.outcome == 'success'
-      uses: actions/upload-artifact@v4
-      with:
-        name: examples
-        path: |
-          examples/*.yaml
+          test.elf
+          !test_unc.elf
 
   release:
     needs: [build]
